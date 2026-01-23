@@ -1,0 +1,5 @@
+name: SinceUpdater
+version: '1.0'
+main: net.danh.sinceUpdater.SinceUpdater
+api-version: '1.18'
+authors: [ VoChiDanh ]

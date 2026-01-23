@@ -1,0 +1,44 @@
+# =============================================================
+#                 SINCEUPDATER CONFIGURATION
+# =============================================================
+
+# -------------------------------------------------------------
+# Citizens Auto-updater
+# Automatically downloads the latest build from Citizens Jenkins.
+# Logic: Checks server version to download the correct NMS module.
+# -------------------------------------------------------------
+citizens-updater:
+  # Enable/Disable Citizens auto-updater
+  enabled: true
+  # Check interval (in Hours)
+  check-interval: 6
+
+# -------------------------------------------------------------
+# EssentialsX Auto-updater
+# Automatically downloads the latest build from EssentialsX Jenkins.
+# -------------------------------------------------------------
+essentials-updater:
+  enabled: true
+  check-interval: 6
+
+  # List of EssentialsX modules.
+  # Set 'true' for the modules you are CURRENTLY USING on the server.
+  # The plugin will automatically download the corresponding jar file.
+  modules:
+    EssentialsX: true
+    EssentialsXSpawn: false
+    EssentialsXChat: false
+    EssentialsXDiscord: false
+    EssentialsXGeoIP: false
+    EssentialsXProtect: false
+    EssentialsXAntiBuild: false
+    EssentialsXXMPP: false
+
+# -------------------------------------------------------------
+# FastAsyncWorldEdit (FAWE) Auto-updater
+# Automatically downloads the latest build from Athion Jenkins (FAWE).
+# Logic: Automatically detects Paper or Bukkit version to download.
+# -------------------------------------------------------------
+fawe-updater:
+  enabled: true
+  check-interval: 6
