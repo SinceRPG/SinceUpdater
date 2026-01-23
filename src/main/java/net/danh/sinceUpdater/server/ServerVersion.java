@@ -4,123 +4,162 @@ import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-public final class ServerVersion {
-
+public class ServerVersion {
     private static final int MAXIMUM_INDEX = 3;
-    private static final int[] CURRENT_VERSION;
-    private static final int REVISION_NUMBER;
-    private static final String CRAFT_BUKKIT_PACKAGE;
-    private static final boolean IS_PAPER;
+    private static final int MAXIMUM_REVISION_NUMBER = 10;
+    private static final String CLASS_NAME_USED = "CraftServer";
+    private final String craftBukkitVersion;
+    private final int revNumber;
+    private final int[] bukkitVersion;
+    private final boolean paper;
 
-    static {
-        final String versionRaw = Bukkit.getBukkitVersion().split("-")[0];
-        final String[] versionSplit = versionRaw.split("\\.");
+    @Deprecated
+    public ServerVersion(Class<?> ignored) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        this();
+    }
 
-        CURRENT_VERSION = new int[Math.min(MAXIMUM_INDEX, versionSplit.length)];
-        for (int i = 0; i < CURRENT_VERSION.length; i++) {
-            try {
-                CURRENT_VERSION[i] = Integer.parseInt(versionSplit[i]);
-            } catch (NumberFormatException e) {
-                CURRENT_VERSION[i] = 0;
-            }
-        }
+    public ServerVersion() throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
 
-        boolean paperCheck = false;
+        // Version numbers
+        final String[] bukkitSplit = Bukkit.getServer().getBukkitVersion().split("\\-")[0].split("\\."); // ["1", "20", "4"]
+        bukkitVersion = new int[Math.min(MAXIMUM_INDEX, bukkitSplit.length)];
+        for (int i = 0; i < bukkitVersion.length; i++)
+            bukkitVersion[i] = Integer.parseInt(bukkitSplit[i]);
+
+        // Compute rev number
+        revNumber = findRevisionNumber();
+        craftBukkitVersion = craftBukkitVersion(revNumber); // "v1_20_R4"
+
+        // Running Paper?
+        boolean isPaper = false;
         try {
-            // Check lớp đặc trưng của Paper
-            Class.forName("com.destroystokyo.paper.PaperConfig");
-            paperCheck = true;
-        } catch (ClassNotFoundException e) {
-            try {
-                Class.forName("io.papermc.paper.configuration.GlobalConfiguration");
-                paperCheck = true;
-            } catch (ClassNotFoundException ignored) {
-            }
+            // Any other works, just the shortest I could find.
+            Class.forName("com.destroystokyo.paper.ParticleBuilder");
+            isPaper = true;
+        } catch (ClassNotFoundException ignored) {
+            // Ignored
         }
-        IS_PAPER = paperCheck;
+        this.paper = isPaper;
 
-        int revision = 0;
-        String cbPackage = "";
+    }
 
+    @NotNull
+    private String craftBukkitVersion(int revNumber) {
+        return "v" + bukkitVersion[0] + "_" + bukkitVersion[1] + "_R" + revNumber;
+    }
+
+    @BackwardsCompatibility(version = "1.20.5")
+    private int findRevisionNumber() {
+
+        // Spigot || Paper <1.20.5
         try {
-            final String serverPackageName = Bukkit.getServer().getClass().getPackage().getName();
-
-            String[] split = serverPackageName.split("\\.");
-
-            if (split.length > 3 && split[3].startsWith("v")) {
-                cbPackage = split[3];
-                Pattern revPattern = Pattern.compile("R(\\d+)");
-                Matcher matcher = revPattern.matcher(cbPackage);
-                if (matcher.find()) {
-                    revision = Integer.parseInt(matcher.group(1));
-                }
-            } else {
-                cbPackage = "v" + CURRENT_VERSION[0] + "_" + CURRENT_VERSION[1] + (CURRENT_VERSION.length > 2 ? "_" + CURRENT_VERSION[2] : "") + "_R0";
-                revision = 0;
-            }
-
-        } catch (Exception e) {
-            cbPackage = "v" + CURRENT_VERSION[0] + "_" + CURRENT_VERSION[1] + "_R0";
+            final Class<?> bukkitServerClass = Bukkit.getServer().getClass();
+            final String rev = bukkitServerClass.getPackage().getName().replace(".", ",").split(",")[3]; // "1_20_R4"
+            return Integer.parseInt(rev.split("_")[2].replaceAll("[^0-9]", ""));
+        } catch (Throwable throwable) {
+            // Ignored
         }
 
-        REVISION_NUMBER = revision;
-        CRAFT_BUKKIT_PACKAGE = cbPackage;
+        // Spigot 1.20.5+
+        for (int revNumber = 1; revNumber < MAXIMUM_REVISION_NUMBER; revNumber++)
+            try {
+                final String candidate = craftBukkitVersion(revNumber);
+                Class.forName("org.bukkit.craftbukkit." + candidate + "." + CLASS_NAME_USED);
+                return revNumber;
+            } catch (Throwable throwable) {
+                // Ignored
+            }
+
+        // Assume no need for the revision number (Paper 1.20.5+)
+        return 0;
     }
 
-    private ServerVersion() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    public boolean isPaper() {
+        return paper;
     }
 
-    public static boolean isPaper() {
-        return IS_PAPER;
-    }
+    /**
+     * This is the most useful function when dealing with compatibility. Since
+     * plugin features are, most of the time, only registered when the server
+     * version is found to be above a certain threshold.
+     *
+     * @param version Provided Minecraft version
+     * @return True if server version is either equal to or above provided version.
+     */
+    public boolean isAbove(int... version) {
+        Validate.isTrue(version.length >= 1 && version.length <= MAXIMUM_INDEX, "Provide at least 1 integer and at most " + MAXIMUM_INDEX);
 
-    public static boolean isAbove(int... version) {
-        Validate.isTrue(version.length >= 1 && version.length <= MAXIMUM_INDEX,
-                "Provide at least 1 integer and at most " + MAXIMUM_INDEX);
-
-        final int maxLength = Math.min(MAXIMUM_INDEX, Math.max(version.length, CURRENT_VERSION.length));
-
+        final int maxLength = Math.min(MAXIMUM_INDEX, Math.max(version.length, bukkitVersion.length));
         for (int i = 0; i < maxLength; i++) {
-            final int serverVer = i < CURRENT_VERSION.length ? CURRENT_VERSION[i] : 0;
-            final int targetVer = i < version.length ? version[i] : 0;
-
-            if (serverVer != targetVer) {
-                return serverVer > targetVer;
-            }
+            final int server = i >= bukkitVersion.length ? 0 : bukkitVersion[i];
+            final int provided = i >= version.length ? 0 : version[i];
+            if (server != provided) return server > provided;
         }
 
         return true;
     }
 
-    public static boolean isUnder(int... version) {
+    public boolean isUnder(int... version) {
         return !isAbove(version);
     }
 
-    public static int getRevisionNumber() {
-        return REVISION_NUMBER;
-    }
-
-    public static int[] getBukkitVersion() {
-        return CURRENT_VERSION;
-    }
-
     @NotNull
-    public static String getCraftBukkitVersion() {
-        return CRAFT_BUKKIT_PACKAGE;
+    public String getCraftBukkitVersion() {
+        return craftBukkitVersion;
+    }
+
+    public int getRevisionNumber() {
+        return revNumber;
+    }
+
+    public int[] getBukkitVersion() {
+        return bukkitVersion;
     }
 
     @Override
     public String toString() {
         return "ServerVersion{" +
-                "package='" + CRAFT_BUKKIT_PACKAGE + '\'' +
-                ", revision=" + REVISION_NUMBER +
-                ", version=" + Arrays.toString(CURRENT_VERSION) +
-                ", isPaper=" + IS_PAPER +
+                "revision='" + craftBukkitVersion + '\'' +
+                ", revisionNumber=" + revNumber +
+                ", integers=" + Arrays.toString(bukkitVersion) +
+                ", paper=" + paper +
                 '}';
+    }
+
+    @Deprecated
+    public String getRevision() {
+        return getCraftBukkitVersion();
+    }
+
+    @Deprecated
+    public int[] toNumbers() {
+        return bukkitVersion;
+    }
+
+    @Deprecated
+    public int[] getIntegers() {
+        return getBukkitVersion();
+    }
+
+    @Deprecated
+    public boolean isStrictlyHigher(int... version) {
+        Validate.isTrue(version.length >= 1 && version.length <= MAXIMUM_INDEX, "Provide at least 1 integer and at most " + MAXIMUM_INDEX);
+
+        final int maxLength = Math.min(MAXIMUM_INDEX, Math.max(version.length, bukkitVersion.length));
+        for (int i = 0; i < maxLength; i++) {
+            final int server = i >= bukkitVersion.length ? 0 : bukkitVersion[i];
+            final int provided = i >= version.length ? 0 : version[i];
+            if (server != provided) return server > provided;
+        }
+
+        return false;
+    }
+
+    @Deprecated
+    public boolean isBelowOrEqual(int... version) {
+        return !isStrictlyHigher(version);
     }
 }

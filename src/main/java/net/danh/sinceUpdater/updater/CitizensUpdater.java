@@ -27,21 +27,16 @@ public class CitizensUpdater extends AbstractUpdater {
 
     private String detectTargetModule() {
         try {
-            // KHÔNG dùng 'new ServerVersion()' nữa
-            // Gọi trực tiếp các method static từ class ServerVersion
-            int[] ver = ServerVersion.getBukkitVersion();
-            int rev = ServerVersion.getRevisionNumber();
+            ServerVersion sv = new ServerVersion();
+            int[] ver = sv.getBukkitVersion();
+            int rev = sv.getRevisionNumber();
 
             if (ver.length < 2) return null;
             int major = ver[1];
 
-            // Citizens thường dùng format v1_XX_RY cho các bản cũ
             if (rev > 0) {
                 return "citizens-v1_" + major + "_R" + rev;
             }
-
-            // Với các bản mới (1.20.5+), Citizens có thể dùng kiến trúc khác
-            // hoặc không cần suffix R, trả về null để bỏ qua check strict module
             return null;
         } catch (Exception e) {
             return null;
