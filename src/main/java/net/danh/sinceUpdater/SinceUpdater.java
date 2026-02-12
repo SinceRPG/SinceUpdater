@@ -11,6 +11,10 @@ public final class SinceUpdater extends JavaPlugin {
     private static SinceUpdater instance;
     private ConfigUtils configUtils;
 
+    public static SinceUpdater getInstance() {
+        return instance;
+    }
+
     @Override
     public void onEnable() {
         instance = this;
@@ -32,10 +36,6 @@ public final class SinceUpdater extends JavaPlugin {
         new CitizensUpdater(this).start();
         new EssentialsUpdater(this).start();
         new FaweUpdater(this).start();
-    }
-
-    public static SinceUpdater getInstance() {
-        return instance;
     }
 
     public ConfigUtils getConfigUtils() {

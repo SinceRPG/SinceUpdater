@@ -12,6 +12,18 @@ citizens-updater:
   enabled: true
   # Check interval (in Hours)
   check-interval: 6
+  old_build:
+    citizens-v1_20_R1: 3208
+    citizens-v1_20_R2: 3282
+    citizens-v1_20_R3: 3399
+    citizens-v1_20_R4: 4016
+    citizens-v1_21_R1: 3598
+    citizens-v1_21_R2: 3644
+    citizens-v1_21_R3: 3763
+    citizens-v1_21_R4: 3821
+    citizens-v1_21_R5: latest
+    citizens-v1_21_R6: latest
+    citizens-v1_21_R7: latest
 
 # -------------------------------------------------------------
 # EssentialsX Auto-updater
