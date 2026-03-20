@@ -7,9 +7,7 @@ import okhttp3.Response;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.logging.Level;
 
 public abstract class AbstractUpdater {
@@ -18,9 +16,9 @@ public abstract class AbstractUpdater {
     protected final OkHttpClient client;
     protected final File pluginsFolder;
     protected final File updateFolder;
+    protected final String logPrefix;
     private final String configPathEnabled;
     private final String configPathInterval;
-    private final String logPrefix;
 
     public AbstractUpdater(SinceUpdater plugin, String configPathEnabled, String configPathInterval, String logPrefix) {
         this.plugin = plugin;
@@ -60,21 +58,7 @@ public abstract class AbstractUpdater {
     protected boolean downloadFile(String url, File destinationFolder, String fileName) {
         Request request = new Request.Builder().url(url).build();
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful() || response.body() == null) return false;
-
-            if (!destinationFolder.exists()) destinationFolder.mkdirs();
-
-            File destFile = new File(destinationFolder, fileName);
-            try (InputStream in = response.body().byteStream();
-                 FileOutputStream fos = new FileOutputStream(destFile)) {
-
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = in.read(buffer)) != -1) {
-                    fos.write(buffer, 0, read);
-                }
-                return true;
-            }
+            return MythicUpdater.fileCheck(destinationFolder, fileName, response);
         } catch (IOException e) {
             plugin.getLogger().severe(logPrefix + " Download failed: " + e.getMessage());
             return false;

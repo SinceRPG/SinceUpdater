@@ -54,3 +54,23 @@ essentials-updater:
 fawe-updater:
   enabled: true
   check-interval: 6
+
+
+# -------------------------------------------------------------
+# Mythic Auto-updater
+# Tự động quét HTML trang web để lấy phiên bản DevBuild mới nhất
+# -------------------------------------------------------------
+mythic-updater:
+  enabled: true
+  check-interval: 6
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  downloads:
+    MythicMobs:
+      page_url: "https://mythiccraft.io/index.php?resources/1/product-devbuild"
+      link_keyword: "build="
+      cookie: ""
+    
+    MythicCrucible:
+      page_url: "https://mythiccraft.io/index.php?pages/official-mythiccrucible-dev/"
+      link_keyword: "build="
+      cookie: ""

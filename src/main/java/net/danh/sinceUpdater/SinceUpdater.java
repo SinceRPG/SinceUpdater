@@ -3,6 +3,7 @@ package net.danh.sinceUpdater;
 import net.danh.sinceUpdater.updater.CitizensUpdater;
 import net.danh.sinceUpdater.updater.EssentialsUpdater;
 import net.danh.sinceUpdater.updater.FaweUpdater;
+import net.danh.sinceUpdater.updater.MythicUpdater;
 import net.danh.sinceUpdater.utils.ConfigUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,6 +11,7 @@ public final class SinceUpdater extends JavaPlugin {
 
     private static SinceUpdater instance;
     private ConfigUtils configUtils;
+    private ConfigUtils dataUtils; // Thêm dataUtils để lưu lịch sử bản build của Mythic
 
     public static SinceUpdater getInstance() {
         return instance;
@@ -19,8 +21,9 @@ public final class SinceUpdater extends JavaPlugin {
     public void onEnable() {
         instance = this;
         configUtils = new ConfigUtils(this, "config.yml");
+        dataUtils = new ConfigUtils(this, "data.yml");
 
-        // 2. Khởi chạy các Updater
+        // Khởi chạy các Updater
         loadUpdaters();
 
         getLogger().info("SinceUpdater has been enabled!");
@@ -36,9 +39,14 @@ public final class SinceUpdater extends JavaPlugin {
         new CitizensUpdater(this).start();
         new EssentialsUpdater(this).start();
         new FaweUpdater(this).start();
+        new MythicUpdater(this).start(); // Khởi chạy Mythic Updater
     }
 
     public ConfigUtils getConfigUtils() {
         return configUtils;
+    }
+
+    public ConfigUtils getDataUtils() {
+        return dataUtils;
     }
 }
