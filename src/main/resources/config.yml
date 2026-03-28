@@ -76,17 +76,21 @@ mythic-updater:
 
 # -------------------------------------------------------------
 # Phoenix Auto-updater (MMO series)
-# Automatically downloads the latest builds from PhoenixDev API.
 # -------------------------------------------------------------
 phoenix-updater:
   enabled: true
   check-interval: 6
-  # Get session-token from your browser (F12 -> Application -> Cookies)
-  session-token: "YOUR_SESSION_TOKEN_HERE"
-  # List of plugins to check (use artifactId from the API JSON)
+
+  # The 128-character ID from your URL
+  user-asset-id: ""
+
+  # The eyJhbGci... token from your Cookies
+  session-token: ""
+
+  # Plugin Names must match the 'artifactId' in the JSON
   plugins:
-    - "MMOCore"
-    - "MMOItems"
-    - "MMOProfiles"
-    - "MMOInventory"
-    - "MythicLib-dist"
+    MMOCore: "983060802141577216"
+    MMOItems: "596393529790693391"
+    MMOProfiles: "1105585475370098689"
+    MMOInventory: "983060898333741127"
+    MythicLib-dist: "free"

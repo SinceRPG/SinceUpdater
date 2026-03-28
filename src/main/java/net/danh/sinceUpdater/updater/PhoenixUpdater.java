@@ -8,14 +8,17 @@ import net.danh.sinceUpdater.SinceUpdater;
 import net.danh.sinceUpdater.utils.ConfigUtils;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.bukkit.configuration.ConfigurationSection;
 
 import java.io.File;
 import java.time.OffsetDateTime;
-import java.util.List;
 
 public class PhoenixUpdater extends AbstractUpdater {
 
-    private static final String API_URL = "https://phoenixdevt.fr/api/nexus/devbuilds";
+    // Metadata comes from the main assets endpoint
+    private static final String METADATA_URL = "https://phoenixdevt.fr/api/nexus/assets";
+    // Downloads use the authenticated endpoint
+    private static final String DOWNLOAD_BASE = "https://phoenixdevt.fr/api/nexus/assets/";
 
     public PhoenixUpdater(SinceUpdater plugin) {
         super(plugin, "phoenix-updater.enabled", "phoenix-updater.check-interval", "[Phoenix-Updater]");
@@ -23,24 +26,27 @@ public class PhoenixUpdater extends AbstractUpdater {
 
     @Override
     protected void checkForUpdate() {
+        String assetId = plugin.getConfigUtils().getString("phoenix-updater.user-asset-id");
         String token = plugin.getConfigUtils().getString("phoenix-updater.session-token");
-        List<String> targetPlugins = plugin.getConfigUtils().getConfig().getStringList("phoenix-updater.plugins");
-        ConfigUtils dataUtils = plugin.getDataUtils(); // Sử dụng data.yml để lưu lịch sử
+        ConfigurationSection plugins = plugin.getConfigUtils().getConfig().getConfigurationSection("phoenix-updater.plugins");
+        ConfigUtils dataUtils = plugin.getDataUtils();
 
-        if (token == null || token.isEmpty() || token.equals("YOUR_SESSION_TOKEN_HERE")) {
-            plugin.getLogger().warning(logPrefix + " Please provide a valid session-token in config.yml!");
+        if (assetId == null || token == null || plugins == null) {
+            plugin.getLogger().warning(logPrefix + " Update cancelled: config.yml is missing data.");
             return;
         }
 
+        // 1. Fetch the JSON list of builds
         Request request = new Request.Builder()
-                .url(API_URL)
+                .url(METADATA_URL)
                 .header("User-Agent", "Mozilla/5.0")
                 .header("Cookie", "__Secure-next-auth.session-token=" + token)
+                .header("Accept", "application/json")
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                plugin.getLogger().warning(logPrefix + " Failed to connect to API. Token might be expired.");
+                plugin.getLogger().warning(logPrefix + " Failed to fetch build list (HTTP " + response.code() + ")");
                 return;
             }
 
@@ -48,70 +54,64 @@ public class PhoenixUpdater extends AbstractUpdater {
             JsonObject root = JsonParser.parseString(jsonString).getAsJsonObject();
             JsonArray items = root.getAsJsonArray("items");
 
-            for (String artifactId : targetPlugins) {
-                processPhoenixPlugin(artifactId, items, token, dataUtils);
+            // 2. Loop through your plugins
+            for (String pluginName : plugins.getKeys(false)) {
+                String roleId = plugins.getString(pluginName);
+                processBuild(pluginName, roleId, items, assetId, token, dataUtils);
             }
 
         } catch (Exception e) {
-            plugin.getLogger().severe(logPrefix + " Error during update check: " + e.getMessage());
+            plugin.getLogger().severe(logPrefix + " Update task failed: " + e.getMessage());
         }
     }
 
-    private void processPhoenixPlugin(String artifactId, JsonArray items, String token, ConfigUtils dataUtils) {
-        String latestUrl = null;
-        OffsetDateTime latestDate = OffsetDateTime.MIN;
-        String latestVersion = null;
+    private void processBuild(String name, String roleId, JsonArray items, String assetId, String token, ConfigUtils dataUtils) {
         String buildId = null;
+        String version = "latest";
+        OffsetDateTime latestDate = OffsetDateTime.MIN;
 
-        // 1. Tìm bản build mới nhất trong danh sách JSON
+        // Scan the JSON items for the latest build of this plugin
         for (JsonElement el : items) {
             JsonObject item = el.getAsJsonObject();
-            JsonObject maven2 = item.getAsJsonObject("maven2");
+            if (!item.has("maven2")) continue;
+            JsonObject maven = item.getAsJsonObject("maven2");
 
-            if (maven2.get("artifactId").getAsString().equalsIgnoreCase(artifactId)) {
+            String artifactId = maven.get("artifactId").getAsString();
+
+            // Match plugin name from config with artifactId in JSON
+            if (artifactId.equalsIgnoreCase(name)) {
                 OffsetDateTime itemDate = OffsetDateTime.parse(item.get("lastModified").getAsString());
                 if (itemDate.isAfter(latestDate)) {
                     latestDate = itemDate;
-                    latestUrl = item.get("downloadUrl").getAsString();
-                    latestVersion = maven2.get("version").getAsString();
-                    buildId = item.get("id").getAsString(); // Lấy ID duy nhất của build
+                    buildId = item.get("id").getAsString();
+                    version = maven.get("version").getAsString();
                 }
             }
         }
 
-        if (latestUrl == null) return;
+        if (buildId == null) return;
 
-        // 2. Kiểm tra lịch sử trong data.yml (giống Mythic)
-        // Chúng ta so sánh buildId hoặc timestamp để biết có phải bản mới không
-        String lastDownloadedId = dataUtils.getString("phoenix_history." + artifactId);
-        if (buildId.equals(lastDownloadedId)) {
-            // Đã tải bản này rồi, không làm gì cả
-            return;
-        }
+        // Compare with history
+        String historyKey = "phoenix_history." + name;
+        if (buildId.equals(dataUtils.getString(historyKey))) return;
 
-        plugin.getLogger().info(logPrefix + " New build found for " + artifactId + " (Build Date: " + latestDate + ")");
+        plugin.getLogger().info(logPrefix + " New build for " + name + " found (Ver: " + version + ")");
 
-        // 3. Xác định tên file và folder đích
-        String fileName = artifactId + "-" + latestVersion + ".jar";
-        File currentFile = findJarInFolder(pluginsFolder, artifactId);
+        // Determine destination
+        File currentFile = findJarInFolder(pluginsFolder, name);
         File outputFolder = (currentFile != null) ? updateFolder : pluginsFolder;
+        String fileName = name + "-" + version + ".jar";
 
-        // Xóa các file cũ đang chờ trong folder update
-        File pendingFile = findJarInFolder(outputFolder, artifactId);
-        if (pendingFile != null) {
-            pendingFile.delete();
-        }
+        // Final Download Link: https://phoenixdevt.fr/api/nexus/assets/{assetId}/{roleId}
+        String downloadUrl = DOWNLOAD_BASE + assetId + "/" + roleId;
 
-        // 4. Tải file
-        if (downloadWithAuth(latestUrl, outputFolder, fileName, token)) {
-            plugin.getLogger().info(logPrefix + " Successfully downloaded " + fileName + " to " + outputFolder.getName());
-
-            // 5. Lưu lại Build ID vào data.yml để lần sau không tải lại bản này nữa
-            dataUtils.setAndSave("phoenix_history." + artifactId, buildId);
+        if (downloadFileWithAuth(downloadUrl, outputFolder, fileName, token)) {
+            plugin.getLogger().info(logPrefix + " Download complete: " + fileName + " saved to " + outputFolder.getName());
+            dataUtils.setAndSave(historyKey, buildId);
         }
     }
 
-    private boolean downloadWithAuth(String url, File destFolder, String fileName, String token) {
+    private boolean downloadFileWithAuth(String url, File folder, String fileName, String token) {
         Request request = new Request.Builder()
                 .url(url)
                 .header("User-Agent", "Mozilla/5.0")
@@ -119,9 +119,13 @@ public class PhoenixUpdater extends AbstractUpdater {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            return MythicUpdater.fileCheck(destFolder, fileName, response);
+            if (response.isSuccessful()) {
+                return MythicUpdater.fileCheck(folder, fileName, response);
+            } else {
+                plugin.getLogger().severe(logPrefix + " Download failed (HTTP " + response.code() + ") for " + fileName);
+                return false;
+            }
         } catch (Exception e) {
-            plugin.getLogger().severe(logPrefix + " Download failed for " + fileName + ": " + e.getMessage());
             return false;
         }
     }
