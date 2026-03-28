@@ -1,9 +1,6 @@
 package net.danh.sinceUpdater;
 
-import net.danh.sinceUpdater.updater.CitizensUpdater;
-import net.danh.sinceUpdater.updater.EssentialsUpdater;
-import net.danh.sinceUpdater.updater.FaweUpdater;
-import net.danh.sinceUpdater.updater.MythicUpdater;
+import net.danh.sinceUpdater.updater.*;
 import net.danh.sinceUpdater.utils.ConfigUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -39,7 +36,8 @@ public final class SinceUpdater extends JavaPlugin {
         new CitizensUpdater(this).start();
         new EssentialsUpdater(this).start();
         new FaweUpdater(this).start();
-        new MythicUpdater(this).start(); // Khởi chạy Mythic Updater
+        new MythicUpdater(this).start();
+        new PhoenixUpdater(this).start();
     }
 
     public ConfigUtils getConfigUtils() {

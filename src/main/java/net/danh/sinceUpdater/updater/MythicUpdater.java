@@ -16,7 +16,6 @@ import java.util.regex.Pattern;
 public class MythicUpdater extends AbstractUpdater {
 
     public MythicUpdater(SinceUpdater plugin) {
-        // Kế thừa AbstractUpdater với thông số riêng cho Mythic
         super(plugin, "mythic-updater.enabled", "mythic-updater.check-interval", "[Mythic-Updater]");
     }
 
@@ -54,7 +53,6 @@ public class MythicUpdater extends AbstractUpdater {
             if (pageUrl == null || keyword == null) continue;
 
             try {
-                // 1. Kéo mã nguồn HTML của trang web
                 Request.Builder requestBuilder = new Request.Builder().url(pageUrl).header("User-Agent", userAgent);
                 if (cookie != null && !cookie.isEmpty()) {
                     requestBuilder.header("Cookie", cookie);
@@ -63,48 +61,41 @@ public class MythicUpdater extends AbstractUpdater {
                 String html;
                 try (Response response = client.newCall(requestBuilder.build()).execute()) {
                     if (!response.isSuccessful() || response.body() == null) {
-                        plugin.getLogger().warning(logPrefix + " Không thể truy cập trang web cho " + pluginName);
+                        plugin.getLogger().warning(logPrefix + " Could not access webpage for " + pluginName);
                         continue;
                     }
                     html = response.body().string();
                 }
 
-                // 2. Tìm link tải bản build trên cùng
                 String downloadLink = extractLinkFromHtml(html, keyword, pageUrl);
                 if (downloadLink == null) {
-                    plugin.getLogger().warning(logPrefix + " Không tìm thấy link tải " + pluginName + ". Cookie có thể đã hết hạn!");
+                    plugin.getLogger().warning(logPrefix + " Could not find download link for " + pluginName + ". Cookie might be expired!");
                     continue;
                 }
 
-                // 3. Kiểm tra xem phiên bản này đã tải chưa
                 String lastDownloaded = dataUtils.getString("last_downloaded." + pluginName);
                 if (downloadLink.equals(lastDownloaded)) {
-                    // Nếu trùng link -> Đã tải bản này rồi -> Bỏ qua cho nhẹ server
                     continue;
                 }
 
-                plugin.getLogger().info(logPrefix + " Phát hiện phiên bản mới cho " + pluginName + "!");
+                plugin.getLogger().info(logPrefix + " New version detected for " + pluginName + "!");
 
-                // 4. Kiểm tra file đang chạy và xác định thư mục tải
                 String fileName = pluginName + ".jar";
                 File currentRunning = findJarInFolder(pluginsFolder, pluginName);
                 File outputFolder = (currentRunning != null) ? updateFolder : pluginsFolder;
 
-                // Xóa bản update cũ nếu có
                 File pendingFile = findJarInFolder(outputFolder, pluginName);
                 if (pendingFile != null) {
                     pendingFile.delete();
                 }
 
-                // 5. Tải file xuống
                 if (downloadFileWithHeaders(downloadLink, outputFolder, fileName, userAgent, cookie)) {
-                    plugin.getLogger().info(logPrefix + " Tải thành công " + fileName + " vào thư mục " + outputFolder.getName());
-                    // Lưu lại link đã tải vào data.yml
+                    plugin.getLogger().info(logPrefix + " Successfully downloaded " + fileName + " to " + outputFolder.getName() + " folder.");
                     dataUtils.setAndSave("last_downloaded." + pluginName, downloadLink);
                 }
 
             } catch (Exception e) {
-                plugin.getLogger().severe(logPrefix + " Lỗi khi xử lý " + pluginName + ": " + e.getMessage());
+                plugin.getLogger().severe(logPrefix + " Error processing " + pluginName + ": " + e.getMessage());
             }
         }
     }
@@ -125,9 +116,6 @@ public class MythicUpdater extends AbstractUpdater {
         return null;
     }
 
-    /**
-     * Viết lại hàm download riêng cho Mythic vì AbstractUpdater không hỗ trợ chèn Cookie Header
-     */
     private boolean downloadFileWithHeaders(String url, File destinationFolder, String fileName, String userAgent, String cookie) {
         Request.Builder requestBuilder = new Request.Builder().url(url).header("User-Agent", userAgent);
         if (cookie != null && !cookie.isEmpty()) {
@@ -137,7 +125,7 @@ public class MythicUpdater extends AbstractUpdater {
         try (Response response = client.newCall(requestBuilder.build()).execute()) {
             return fileCheck(destinationFolder, fileName, response);
         } catch (Exception e) {
-            plugin.getLogger().severe(logPrefix + " Lỗi tải file: " + e.getMessage());
+            plugin.getLogger().severe(logPrefix + " Download failed: " + e.getMessage());
             return false;
         }
     }

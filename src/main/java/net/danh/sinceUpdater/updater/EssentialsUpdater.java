@@ -50,27 +50,22 @@ public class EssentialsUpdater extends AbstractUpdater {
     }
 
     private void processModule(String moduleName, String newFileName, String relativePath) {
-        // 1. Check file đang chạy
         File currentRunning = findModuleJar(pluginsFolder, moduleName);
-
         if (currentRunning != null && currentRunning.getName().equals(newFileName)) return;
 
-        // 2. Xác định folder đích
-        // Có file cũ -> update folder. Chưa có -> plugins folder.
         File outputFolder = (currentRunning != null) ? updateFolder : pluginsFolder;
 
-        // 3. Check file chờ ở folder đích
         File pendingFile = findModuleJar(outputFolder, moduleName);
         if (pendingFile != null) {
             if (pendingFile.getName().equals(newFileName)) return;
-            pendingFile.delete(); // Xóa bản cũ
+            pendingFile.delete();
         }
 
-        plugin.getLogger().info("[Ess-Updater] Found version for " + moduleName + ": " + newFileName);
+        plugin.getLogger().info("[Ess-Updater] Found new version for " + moduleName + ": " + newFileName);
         String url = "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/artifact/" + relativePath;
 
         if (downloadFile(url, outputFolder, newFileName)) {
-            plugin.getLogger().info("[Ess-Updater] Downloaded " + newFileName + " to '" + outputFolder.getName() + "' folder.");
+            plugin.getLogger().info("[Ess-Updater] Successfully downloaded " + newFileName + " to '" + outputFolder.getName() + "' folder.");
         }
     }
 

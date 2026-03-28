@@ -1,5 +1,5 @@
 # =============================================================
-#                 SINCEUPDATER CONFIGURATION
+#                  SINCEUPDATER CONFIGURATION
 # =============================================================
 
 # -------------------------------------------------------------
@@ -55,10 +55,9 @@ fawe-updater:
   enabled: true
   check-interval: 6
 
-
 # -------------------------------------------------------------
 # Mythic Auto-updater
-# Tự động quét HTML trang web để lấy phiên bản DevBuild mới nhất
+# Automatically scrapes website HTML to get the latest DevBuild version.
 # -------------------------------------------------------------
 mythic-updater:
   enabled: true
@@ -69,8 +68,25 @@ mythic-updater:
       page_url: "https://mythiccraft.io/index.php?resources/1/product-devbuild"
       link_keyword: "build="
       cookie: ""
-    
+
     MythicCrucible:
       page_url: "https://mythiccraft.io/index.php?pages/official-mythiccrucible-dev/"
       link_keyword: "build="
       cookie: ""
+
+# -------------------------------------------------------------
+# Phoenix Auto-updater (MMO series)
+# Automatically downloads the latest builds from PhoenixDev API.
+# -------------------------------------------------------------
+phoenix-updater:
+  enabled: true
+  check-interval: 6
+  # Get session-token from your browser (F12 -> Application -> Cookies)
+  session-token: "YOUR_SESSION_TOKEN_HERE"
+  # List of plugins to check (use artifactId from the API JSON)
+  plugins:
+    - "MMOCore"
+    - "MMOItems"
+    - "MMOProfiles"
+    - "MMOInventory"
+    - "MythicLib-dist"
