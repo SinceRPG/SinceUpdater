@@ -81,13 +81,10 @@ phoenix-updater:
   enabled: true
   check-interval: 6
 
-  # The 128-character ID from your URL
-  user-asset-id: ""
-
-  # The eyJhbGci... token from your Cookies
+  # Lấy từ Cookies (F12 -> Application -> Cookies)
   session-token: ""
 
-  # Plugin Names must match the 'artifactId' in the JSON
+  # Danh sách Role ID tương ứng (Lấy từ phần 'unique' trong JSON)
   plugins:
     MMOCore: "983060802141577216"
     MMOItems: "596393529790693391"

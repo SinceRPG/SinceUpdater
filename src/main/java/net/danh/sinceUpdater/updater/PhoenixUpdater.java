@@ -15,10 +15,8 @@ import java.time.OffsetDateTime;
 
 public class PhoenixUpdater extends AbstractUpdater {
 
-    // Metadata comes from the main assets endpoint
-    private static final String METADATA_URL = "https://phoenixdevt.fr/api/nexus/assets";
-    // Downloads use the authenticated endpoint
-    private static final String DOWNLOAD_BASE = "https://phoenixdevt.fr/api/nexus/assets/";
+    private static final String API_METADATA = "https://phoenixdevt.fr/api/nexus/assets";
+    private static final String DOWNLOAD_URL_ROOT = "https://phoenixdevt.fr/api/nexus/assets/";
 
     public PhoenixUpdater(SinceUpdater plugin) {
         super(plugin, "phoenix-updater.enabled", "phoenix-updater.check-interval", "[Phoenix-Updater]");
@@ -26,19 +24,18 @@ public class PhoenixUpdater extends AbstractUpdater {
 
     @Override
     protected void checkForUpdate() {
-        String assetId = plugin.getConfigUtils().getString("phoenix-updater.user-asset-id");
         String token = plugin.getConfigUtils().getString("phoenix-updater.session-token");
         ConfigurationSection plugins = plugin.getConfigUtils().getConfig().getConfigurationSection("phoenix-updater.plugins");
         ConfigUtils dataUtils = plugin.getDataUtils();
 
-        if (assetId == null || token == null || plugins == null) {
-            plugin.getLogger().warning(logPrefix + " Update cancelled: config.yml is missing data.");
+        if (token == null || token.isEmpty()) {
+            plugin.getLogger().warning(logPrefix + " Setup incomplete: 'session-token' is missing in config.yml.");
             return;
         }
 
-        // 1. Fetch the JSON list of builds
+        // Bước 1: Lấy danh sách build để tìm mã SHA-512 thật của từng plugin
         Request request = new Request.Builder()
-                .url(METADATA_URL)
+                .url(API_METADATA)
                 .header("User-Agent", "Mozilla/5.0")
                 .header("Cookie", "__Secure-next-auth.session-token=" + token)
                 .header("Accept", "application/json")
@@ -46,67 +43,73 @@ public class PhoenixUpdater extends AbstractUpdater {
 
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
-                plugin.getLogger().warning(logPrefix + " Failed to fetch build list (HTTP " + response.code() + ")");
+                plugin.getLogger().warning(logPrefix + " Connection failed (HTTP " + response.code() + "). Token might be expired.");
                 return;
             }
 
             String jsonString = response.body().string();
+            if (jsonString.trim().startsWith("<")) {
+                plugin.getLogger().severe(logPrefix + " Received HTML instead of JSON. Authentication failed.");
+                return;
+            }
+
             JsonObject root = JsonParser.parseString(jsonString).getAsJsonObject();
             JsonArray items = root.getAsJsonArray("items");
 
-            // 2. Loop through your plugins
+            // Bước 2: Duyệt từng plugin đã cấu hình
             for (String pluginName : plugins.getKeys(false)) {
                 String roleId = plugins.getString(pluginName);
-                processBuild(pluginName, roleId, items, assetId, token, dataUtils);
+                processPlugin(pluginName, roleId, items, token, dataUtils);
             }
 
         } catch (Exception e) {
-            plugin.getLogger().severe(logPrefix + " Update task failed: " + e.getMessage());
+            plugin.getLogger().severe(logPrefix + " Task failed: " + e.getMessage());
         }
     }
 
-    private void processBuild(String name, String roleId, JsonArray items, String assetId, String token, ConfigUtils dataUtils) {
+    private void processPlugin(String name, String roleId, JsonArray items, String token, ConfigUtils dataUtils) {
+        String specificSha512 = null;
         String buildId = null;
         String version = "latest";
         OffsetDateTime latestDate = OffsetDateTime.MIN;
 
-        // Scan the JSON items for the latest build of this plugin
+        // Quét JSON để tìm bản build mới nhất của plugin này
         for (JsonElement el : items) {
             JsonObject item = el.getAsJsonObject();
-            if (!item.has("maven2")) continue;
-            JsonObject maven = item.getAsJsonObject("maven2");
+            if (!item.has("maven2") || !item.has("checksum")) continue;
 
+            JsonObject maven = item.getAsJsonObject("maven2");
             String artifactId = maven.get("artifactId").getAsString();
 
-            // Match plugin name from config with artifactId in JSON
             if (artifactId.equalsIgnoreCase(name)) {
                 OffsetDateTime itemDate = OffsetDateTime.parse(item.get("lastModified").getAsString());
                 if (itemDate.isAfter(latestDate)) {
                     latestDate = itemDate;
                     buildId = item.get("id").getAsString();
                     version = maven.get("version").getAsString();
+                    // ĐÂY LÀ CHÌA KHÓA: Lấy SHA-512 của đúng file đó
+                    specificSha512 = item.getAsJsonObject("checksum").get("sha512").getAsString();
                 }
             }
         }
 
-        if (buildId == null) return;
+        if (specificSha512 == null || buildId == null) return;
 
-        // Compare with history
+        // Kiểm tra lịch sử
         String historyKey = "phoenix_history." + name;
         if (buildId.equals(dataUtils.getString(historyKey))) return;
 
-        plugin.getLogger().info(logPrefix + " New build for " + name + " found (Ver: " + version + ")");
+        plugin.getLogger().info(logPrefix + " New version for " + name + " detected: " + version);
 
-        // Determine destination
+        // Tạo URL tải chính xác dựa trên mã SHA-512 vừa tìm được
+        String downloadUrl = DOWNLOAD_URL_ROOT + specificSha512 + "/" + roleId;
+
         File currentFile = findJarInFolder(pluginsFolder, name);
         File outputFolder = (currentFile != null) ? updateFolder : pluginsFolder;
         String fileName = name + "-" + version + ".jar";
 
-        // Final Download Link: https://phoenixdevt.fr/api/nexus/assets/{assetId}/{roleId}
-        String downloadUrl = DOWNLOAD_BASE + assetId + "/" + roleId;
-
         if (downloadFileWithAuth(downloadUrl, outputFolder, fileName, token)) {
-            plugin.getLogger().info(logPrefix + " Download complete: " + fileName + " saved to " + outputFolder.getName());
+            plugin.getLogger().info(logPrefix + " Successfully downloaded " + fileName + " (" + outputFolder.getName() + " folder)");
             dataUtils.setAndSave(historyKey, buildId);
         }
     }
@@ -122,10 +125,11 @@ public class PhoenixUpdater extends AbstractUpdater {
             if (response.isSuccessful()) {
                 return MythicUpdater.fileCheck(folder, fileName, response);
             } else {
-                plugin.getLogger().severe(logPrefix + " Download failed (HTTP " + response.code() + ") for " + fileName);
+                plugin.getLogger().severe(logPrefix + " Download blocked for " + fileName + " (HTTP " + response.code() + ")");
                 return false;
             }
         } catch (Exception e) {
+            plugin.getLogger().severe(logPrefix + " Error: " + e.getMessage());
             return false;
         }
     }
