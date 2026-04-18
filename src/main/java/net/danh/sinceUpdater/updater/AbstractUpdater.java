@@ -53,6 +53,21 @@ public abstract class AbstractUpdater {
         }.runTaskTimerAsynchronously(plugin, 0L, ticks);
     }
 
+    public void triggerUpdate() {
+        if (!plugin.getConfigUtils().getConfig().getBoolean(configPathEnabled, true)) return;
+        if (!updateFolder.exists()) updateFolder.mkdirs();
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                try {
+                    checkForUpdate();
+                } catch (Exception e) {
+                    plugin.getLogger().log(Level.SEVERE, logPrefix + " Error checking update", e);
+                }
+            }
+        }.runTaskAsynchronously(plugin);
+    }
+
     protected abstract void checkForUpdate();
 
     protected boolean downloadFile(String url, File destinationFolder, String fileName) {

@@ -21,9 +21,10 @@ citizens-updater:
     citizens-v1_21_R2: 3644
     citizens-v1_21_R3: 3763
     citizens-v1_21_R4: 3821
-    citizens-v1_21_R5: latest
+    citizens-v1_21_R5: 4138
     citizens-v1_21_R6: latest
     citizens-v1_21_R7: latest
+    citizens-v26_1_R1: latest
 
 # -------------------------------------------------------------
 # EssentialsX Auto-updater

@@ -3,3 +3,9 @@ version: '1.0'
 main: net.danh.sinceUpdater.SinceUpdater
 api-version: '1.18'
 authors: [ VoChiDanh ]
+
+commands:
+  sinceupdater:
+    description: Main command for SinceUpdater
+    aliases: [su]
+    permission: sinceupdater.admin
