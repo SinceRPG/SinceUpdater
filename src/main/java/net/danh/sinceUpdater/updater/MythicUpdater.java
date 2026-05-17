@@ -59,7 +59,7 @@ public class MythicUpdater extends AbstractUpdater {
                 }
 
                 String html;
-                try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                try (Response response = plugin.getHttpClient().newCall(requestBuilder.build()).execute()) {
                     if (!response.isSuccessful() || response.body() == null) {
                         plugin.getLogger().warning(logPrefix + " Could not access webpage for " + pluginName);
                         continue;
@@ -122,7 +122,7 @@ public class MythicUpdater extends AbstractUpdater {
             requestBuilder.header("Cookie", cookie);
         }
 
-        try (Response response = client.newCall(requestBuilder.build()).execute()) {
+        try (Response response = plugin.getHttpClient().newCall(requestBuilder.build()).execute()) {
             return fileCheck(destinationFolder, fileName, response);
         } catch (Exception e) {
             plugin.getLogger().severe(logPrefix + " Download failed: " + e.getMessage());

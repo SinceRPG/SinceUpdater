@@ -15,11 +15,13 @@ import java.time.OffsetDateTime;
 
 public class PhoenixUpdater extends AbstractUpdater {
 
-    private static final String API_METADATA = "https://phoenixdevt.fr/api/nexus/assets";
-    private static final String DOWNLOAD_URL_ROOT = "https://phoenixdevt.fr/api/nexus/assets/";
+    private final String apiMetadata;
+    private final String downloadUrlRoot;
 
     public PhoenixUpdater(SinceUpdater plugin) {
         super(plugin, "phoenix-updater.enabled", "phoenix-updater.check-interval", "[Phoenix-Updater]");
+        this.apiMetadata = plugin.getConfigUtils().getString("urls.phoenix.api-metadata", "https://phoenixdevt.fr/api/nexus/assets");
+        this.downloadUrlRoot = plugin.getConfigUtils().getString("urls.phoenix.download-root", "https://phoenixdevt.fr/api/nexus/assets/");
     }
 
     @Override
@@ -33,15 +35,14 @@ public class PhoenixUpdater extends AbstractUpdater {
             return;
         }
 
-        // Bước 1: Lấy danh sách build để tìm mã SHA-512 thật của từng plugin
         Request request = new Request.Builder()
-                .url(API_METADATA)
+                .url(apiMetadata)
                 .header("User-Agent", "Mozilla/5.0")
                 .header("Cookie", "__Secure-next-auth.session-token=" + token)
                 .header("Accept", "application/json")
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = plugin.getHttpClient().newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) {
                 plugin.getLogger().warning(logPrefix + " Connection failed (HTTP " + response.code() + "). Token might be expired.");
                 return;
@@ -56,7 +57,6 @@ public class PhoenixUpdater extends AbstractUpdater {
             JsonObject root = JsonParser.parseString(jsonString).getAsJsonObject();
             JsonArray items = root.getAsJsonArray("items");
 
-            // Bước 2: Duyệt từng plugin đã cấu hình
             for (String pluginName : plugins.getKeys(false)) {
                 String roleId = plugins.getString(pluginName);
                 processPlugin(pluginName, roleId, items, token, dataUtils);
@@ -73,7 +73,6 @@ public class PhoenixUpdater extends AbstractUpdater {
         String version = "latest";
         OffsetDateTime latestDate = OffsetDateTime.MIN;
 
-        // Quét JSON để tìm bản build mới nhất của plugin này
         for (JsonElement el : items) {
             JsonObject item = el.getAsJsonObject();
             if (!item.has("maven2") || !item.has("checksum")) continue;
@@ -87,7 +86,6 @@ public class PhoenixUpdater extends AbstractUpdater {
                     latestDate = itemDate;
                     buildId = item.get("id").getAsString();
                     version = maven.get("version").getAsString();
-                    // ĐÂY LÀ CHÌA KHÓA: Lấy SHA-512 của đúng file đó
                     specificSha512 = item.getAsJsonObject("checksum").get("sha512").getAsString();
                 }
             }
@@ -95,14 +93,12 @@ public class PhoenixUpdater extends AbstractUpdater {
 
         if (specificSha512 == null || buildId == null) return;
 
-        // Kiểm tra lịch sử
         String historyKey = "phoenix_history." + name;
         if (buildId.equals(dataUtils.getString(historyKey))) return;
 
         plugin.getLogger().info(logPrefix + " New version for " + name + " detected: " + version);
 
-        // Tạo URL tải chính xác dựa trên mã SHA-512 vừa tìm được
-        String downloadUrl = DOWNLOAD_URL_ROOT + specificSha512 + "/" + roleId;
+        String downloadUrl = downloadUrlRoot + specificSha512 + "/" + roleId;
 
         File currentFile = findJarInFolder(pluginsFolder, name);
         File outputFolder = (currentFile != null) ? updateFolder : pluginsFolder;
@@ -121,7 +117,7 @@ public class PhoenixUpdater extends AbstractUpdater {
                 .header("Cookie", "__Secure-next-auth.session-token=" + token)
                 .build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = plugin.getHttpClient().newCall(request).execute()) {
             if (response.isSuccessful()) {
                 return MythicUpdater.fileCheck(folder, fileName, response);
             } else {

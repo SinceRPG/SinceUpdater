@@ -13,17 +13,20 @@ import java.io.File;
 
 public class EssentialsUpdater extends AbstractUpdater {
 
-    private static final String JENKINS_URL = "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/api/json";
+    private final String jenkinsUrl;
+    private final String downloadBase;
 
     public EssentialsUpdater(SinceUpdater plugin) {
         super(plugin, "essentials-updater.enabled", "essentials-updater.check-interval", "[Ess-Updater]");
+        this.jenkinsUrl = plugin.getConfigUtils().getString("urls.essentials.jenkins", "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/api/json");
+        this.downloadBase = plugin.getConfigUtils().getString("urls.essentials.download-base", "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/artifact/");
     }
 
     @Override
     protected void checkForUpdate() {
-        Request request = new Request.Builder().url(JENKINS_URL).build();
+        Request request = new Request.Builder().url(jenkinsUrl).build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = plugin.getHttpClient().newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) return;
 
             String jsonString = response.body().string();
@@ -62,7 +65,7 @@ public class EssentialsUpdater extends AbstractUpdater {
         }
 
         plugin.getLogger().info("[Ess-Updater] Found new version for " + moduleName + ": " + newFileName);
-        String url = "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/artifact/" + relativePath;
+        String url = downloadBase + relativePath;
 
         if (downloadFile(url, outputFolder, newFileName)) {
             plugin.getLogger().info("[Ess-Updater] Successfully downloaded " + newFileName + " to '" + outputFolder.getName() + "' folder.");

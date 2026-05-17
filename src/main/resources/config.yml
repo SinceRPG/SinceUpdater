@@ -2,15 +2,28 @@
 #                  SINCEUPDATER CONFIGURATION
 # =============================================================
 
+# Define all internal API URLs to prevent hardcoding inside the plugin logic
+urls:
+  citizens:
+    base-job: "https://ci.citizensnpcs.co/job/Citizens2/"
+    max-search-depth: 15
+  essentials:
+    jenkins: "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/api/json"
+    download-base: "https://ci.ender.zone/job/EssentialsX/lastSuccessfulBuild/artifact/"
+  fawe:
+    jenkins: "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/api/json"
+    download-base: "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/artifact/"
+  phoenix:
+    api-metadata: "https://phoenixdevt.fr/api/nexus/assets"
+    download-root: "https://phoenixdevt.fr/api/nexus/assets/"
+
 # -------------------------------------------------------------
 # Citizens Auto-updater
 # Automatically downloads the latest build from Citizens Jenkins.
 # Logic: Checks server version to download the correct NMS module.
 # -------------------------------------------------------------
 citizens-updater:
-  # Enable/Disable Citizens auto-updater
   enabled: true
-  # Check interval (in Hours)
   check-interval: 6
   old_build:
     citizens-v1_20_R1: 3208
@@ -82,10 +95,10 @@ phoenix-updater:
   enabled: true
   check-interval: 6
 
-  # Lấy từ Cookies (F12 -> Application -> Cookies)
+  # Session token from browser Cookies (F12 -> Application -> Cookies)
   session-token: ""
 
-  # Danh sách Role ID tương ứng (Lấy từ phần 'unique' trong JSON)
+  # Target Role IDs corresponding to plugin assets
   plugins:
     MMOCore: "983060802141577216"
     MMOItems: "596393529790693391"

@@ -12,17 +12,20 @@ import java.io.File;
 
 public class FaweUpdater extends AbstractUpdater {
 
-    private static final String JENKINS_URL = "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/api/json";
+    private final String jenkinsUrl;
+    private final String downloadBase;
 
     public FaweUpdater(SinceUpdater plugin) {
         super(plugin, "fawe-updater.enabled", "fawe-updater.check-interval", "[FAWE-Updater]");
+        this.jenkinsUrl = plugin.getConfigUtils().getString("urls.fawe.jenkins", "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/api/json");
+        this.downloadBase = plugin.getConfigUtils().getString("urls.fawe.download-base", "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/artifact/");
     }
 
     @Override
     protected void checkForUpdate() {
-        Request request = new Request.Builder().url(JENKINS_URL).build();
+        Request request = new Request.Builder().url(jenkinsUrl).build();
 
-        try (Response response = client.newCall(request).execute()) {
+        try (Response response = plugin.getHttpClient().newCall(request).execute()) {
             if (!response.isSuccessful() || response.body() == null) return;
 
             String jsonString = response.body().string();
@@ -52,26 +55,19 @@ public class FaweUpdater extends AbstractUpdater {
 
             if (selectedFileName == null) return;
 
-            // 1. Kiểm tra file đang chạy
             File currentRunning = findJarInFolder(pluginsFolder, "FastAsyncWorldEdit");
-
-            // Nếu đang chạy và trùng tên -> Bỏ qua
             if (currentRunning != null && currentRunning.getName().equals(selectedFileName)) return;
 
-            // 2. Xác định folder đích
-            // - Có file cũ -> Tải vào 'update'
-            // - Chưa có -> Tải vào 'plugins' (Cài mới)
             File outputFolder = (currentRunning != null) ? updateFolder : pluginsFolder;
-
-            // 3. Kiểm tra xem file đích đã tồn tại chưa (tránh tải lại)
             File targetFile = findJarInFolder(outputFolder, "FastAsyncWorldEdit");
+
             if (targetFile != null) {
-                if (targetFile.getName().equals(selectedFileName)) return; // Đã tải rồi
-                targetFile.delete(); // Xóa bản chờ cũ
+                if (targetFile.getName().equals(selectedFileName)) return;
+                targetFile.delete();
             }
 
             plugin.getLogger().info("[FAWE-Updater] Found version: " + selectedFileName);
-            String url = "https://ci.athion.net/job/FastAsyncWorldEdit/lastSuccessfulBuild/artifact/" + selectedRelativePath;
+            String url = downloadBase + selectedRelativePath;
 
             if (downloadFile(url, outputFolder, selectedFileName)) {
                 String folderName = outputFolder.getName();
