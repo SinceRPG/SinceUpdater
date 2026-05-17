@@ -1,9 +1,9 @@
 name: SinceUpdater
-version: '1.0'
+version: '${version}'
 main: net.danh.sinceUpdater.SinceUpdater
 api-version: '1.18'
 authors: [ VoChiDanh ]
-
+folia-supported: true
 commands:
   sinceupdater:
     description: Main command for SinceUpdater

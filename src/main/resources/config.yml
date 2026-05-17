@@ -23,7 +23,7 @@ urls:
 # Logic: Checks server version to download the correct NMS module.
 # -------------------------------------------------------------
 citizens-updater:
-  enabled: true
+  enabled: false
   check-interval: 6
   old_build:
     citizens-v1_20_R1: 3208
@@ -44,7 +44,7 @@ citizens-updater:
 # Automatically downloads the latest build from EssentialsX Jenkins.
 # -------------------------------------------------------------
 essentials-updater:
-  enabled: true
+  enabled: false
   check-interval: 6
 
   # List of EssentialsX modules.
@@ -66,7 +66,7 @@ essentials-updater:
 # Logic: Automatically detects Paper or Bukkit version to download.
 # -------------------------------------------------------------
 fawe-updater:
-  enabled: true
+  enabled: false
   check-interval: 6
 
 # -------------------------------------------------------------
@@ -92,7 +92,7 @@ mythic-updater:
 # Phoenix Auto-updater (MMO series)
 # -------------------------------------------------------------
 phoenix-updater:
-  enabled: true
+  enabled: false
   check-interval: 6
 
   # Session token from browser Cookies (F12 -> Application -> Cookies)
