@@ -43,12 +43,20 @@ public class MythicUpdater extends AbstractUpdater {
         if (downloads == null) return;
 
         String userAgent = plugin.getConfigUtils().getString("mythic-updater.user_agent", "Mozilla/5.0");
+        String globalCookie = plugin.getConfigUtils().getString("mythic-updater.cookie", "");
         ConfigUtils dataUtils = plugin.getDataUtils();
 
         for (String pluginName : downloads.getKeys(false)) {
+            boolean isEnabled = downloads.getBoolean(pluginName + ".enabled", true);
+            if (!isEnabled) continue;
+
             String pageUrl = downloads.getString(pluginName + ".page_url");
-            String keyword = downloads.getString(pluginName + ".link_keyword");
+            String keyword = downloads.getString(pluginName + ".link_keyword", "build=");
             String cookie = downloads.getString(pluginName + ".cookie");
+
+            if (cookie == null || cookie.trim().isEmpty()) {
+                cookie = globalCookie;
+            }
 
             if (pageUrl == null || keyword == null) continue;
 
@@ -61,7 +69,7 @@ public class MythicUpdater extends AbstractUpdater {
                 String html;
                 try (Response response = plugin.getHttpClient().newCall(requestBuilder.build()).execute()) {
                     if (!response.isSuccessful() || response.body() == null) {
-                        plugin.getLogger().warning(logPrefix + " Could not access webpage for " + pluginName);
+                        plugin.getLogger().warning(logPrefix + " Could not access webpage for " + pluginName + " (HTTP " + response.code() + ")");
                         continue;
                     }
                     html = response.body().string();
@@ -69,7 +77,11 @@ public class MythicUpdater extends AbstractUpdater {
 
                 String downloadLink = extractLinkFromHtml(html, keyword, pageUrl);
                 if (downloadLink == null) {
-                    plugin.getLogger().warning(logPrefix + " Could not find download link for " + pluginName + ". Cookie might be expired!");
+                    if (cookie == null || cookie.trim().isEmpty()) {
+                        plugin.getLogger().warning(logPrefix + " Could not find download link for " + pluginName + ". Cookie is not configured!");
+                    } else {
+                        plugin.getLogger().warning(logPrefix + " Could not find download link for " + pluginName + ". Cookie might be expired or account lacks access!");
+                    }
                     continue;
                 }
 

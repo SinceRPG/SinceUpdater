@@ -47,9 +47,14 @@ tasks.withType(JavaCompile).configureEach {
     }
 }
 
+tasks.jar {
+    enabled = false
+}
+
 shadowJar {
-    relocate 'okhttp3', 'net.danh.SinceUpdater.libs.okhttp3'
-    relocate 'okio', 'net.danh.SinceUpdater.libs.okio'
+    relocate 'okhttp3', 'net.danh.sinceUpdater.libs.okhttp3'
+    relocate 'okio', 'net.danh.sinceUpdater.libs.okio'
+    relocate 'kotlin', 'net.danh.sinceUpdater.libs.kotlin'
 
     // Tên file jar xuất ra (tùy chọn)
     archiveClassifier.set('')
@@ -64,4 +69,5 @@ processResources {
     }
 }
 
-build.dependsOn shadowJar
+tasks.assemble.dependsOn tasks.shadowJar
+tasks.build.dependsOn tasks.shadowJar

@@ -44,7 +44,7 @@ citizens-updater:
 # Automatically downloads the latest build from EssentialsX Jenkins.
 # -------------------------------------------------------------
 essentials-updater:
-  enabled: false
+  enabled: true
   check-interval: 6
 
   # List of EssentialsX modules.
@@ -52,7 +52,7 @@ essentials-updater:
   # The plugin will automatically download the corresponding jar file.
   modules:
     EssentialsX: true
-    EssentialsXSpawn: false
+    EssentialsXSpawn: true
     EssentialsXChat: false
     EssentialsXDiscord: false
     EssentialsXGeoIP: false
@@ -66,7 +66,7 @@ essentials-updater:
 # Logic: Automatically detects Paper or Bukkit version to download.
 # -------------------------------------------------------------
 fawe-updater:
-  enabled: false
+  enabled: true
   check-interval: 6
 
 # -------------------------------------------------------------
@@ -77,16 +77,62 @@ mythic-updater:
   enabled: true
   check-interval: 6
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+  # Shared Cookie for all Mythiccraft plugins (F12 -> Application -> Cookies -> https://mythiccraft.io)
+  # Examples: xf_user=...; xf_session=...
+  # You can also set a specific 'cookie' under any individual plugin below to override this.
+  cookie: ""
+
   downloads:
     MythicMobs:
-      page_url: "https://mythiccraft.io/index.php?resources/1/product-devbuild"
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythicmobs.1/product-devbuild"
       link_keyword: "build="
-      cookie: ""
 
     MythicCrucible:
-      page_url: "https://mythiccraft.io/index.php?pages/official-mythiccrucible-dev/"
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythiccrucible.2/product-devbuild"
       link_keyword: "build="
-      cookie: ""
+
+    ModelEngine:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/model-engine%E2%80%94ultimate-entity-model-manager-1-19-4-26-2.1213/product-devbuild"
+      link_keyword: "build="
+
+    MythicDungeons:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythic-dungeons.869/product-devbuild"
+      link_keyword: "build="
+
+    MythicArmors:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythicarmors.1575/product-devbuild"
+      link_keyword: "build="
+
+    MythicCosmetics:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythiccosmetics.818/product-devbuild"
+      link_keyword: "build="
+
+    MythicEnchants:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?pages/official-mythicenchants-dev/"
+      link_keyword: "build="
+
+    MythicHUD:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/%E2%AD%90mythichud%E2%AD%90custom-bars-and-number-displays%E2%9C%85replace-vanilla-look%E2%9C%85auto-resource-pack-builder.394/product-devbuild"
+      link_keyword: "build="
+
+    MythicAchievements:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythicachievements.915/product-devbuild"
+      link_keyword: "build="
+
+    MythicRPG:
+      enabled: true
+      page_url: "https://mythiccraft.io/index.php?resources/mythicrpg-spells-classes-professions-more.129/product-devbuild"
+      link_keyword: "build="
 
 # -------------------------------------------------------------
 # Phoenix Auto-updater (MMO series)
